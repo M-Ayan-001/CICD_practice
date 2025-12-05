@@ -12,31 +12,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 1️⃣ Copy files (Optimized)
+      # 1️⃣ Copy repo contents to EC2
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_IP }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "." # Use "." to capture root, but apply excludes below
+          source: "."
           target: "/home/ubuntu/app"
-          # EXCLUDE .git to save bandwidth and node_modules to ensure clean install
-          exclude: ".git,node_modules"
 
-      # 2️⃣ SSH commands (Path-safe)
+      # 2️⃣ SSH into EC2 and restart app
       - name: Install deps and restart PM2
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.EC2_IP }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          # export NVM_DIR... ensures node is found if you use NVM
-          # If using system node, this might not be needed, but 'source ~/.profile' is a good safety net
           script: |
-            source ~/.profile
-            source ~/.bashrc
             cd /home/ubuntu/app
             npm install
-            pm2 reload ecosystem.config.js || pm2 start ecosystem.config.js --update-env
+            pm2 reload ecosystem.config.js || pm2 start ecosystem.config.js
             pm2 save
